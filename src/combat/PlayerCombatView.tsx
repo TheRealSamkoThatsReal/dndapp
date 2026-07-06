@@ -233,18 +233,87 @@ function StatusBadge({ name, rounds }: { name: string; rounds: number | null }) 
   )
 }
 
-// ── sprite picker (emoji stand-ins, stable per name) ────────────
-const HEROES = ['🧝', '🧙', '🧚', '🦸', '🧛', '🥷', '👸', '🤴', '🧑‍🎤']
-const FOES = ['👹', '👺', '🐉', '🐺', '🦇', '🕷️', '🧟', '👻', '🐗', '🦂', '🐍', '🦑', '👿', '☠️', '🦖', '🐙']
+// ── sprite picker: driven by creature type, refined by name ─────
+// The name usually says exactly what a creature is ("Frost Giant", "Goblin"),
+// so specific name keywords win; the D&D type line is the categorical fallback.
+const NAME_EMOJI: [RegExp, string][] = [
+  [/dragon|wyrm|wyvern|drake/, '🐉'],
+  [/goblin|hobgoblin|bugbear/, '👺'],
+  [/orc|ogre|troll/, '👹'],
+  [/kobold|lizard|gecko|salamander/, '🦎'],
+  [/skeleton|bone/, '💀'],
+  [/zombie|ghoul|ghast|mummy/, '🧟'],
+  [/vampire/, '🧛'],
+  [/ghost|spec(t|tr)e|wraith|shade|shadow|phantom|poltergeist|banshee|specter/, '👻'],
+  [/lich|reaper|death knight/, '☠️'],
+  [/demon|devil|imp|fiend|balor|barbed|bearded|erinyes|quasit/, '👿'],
+  [/angel|deva|solar|planetar|couatl/, '😇'],
+  [/gnoll|wolf|worg|hound|dog|jackal|hyena|mastiff|winter wolf/, '🐺'],
+  [/owlbear|bear/, '🐻'],
+  [/spider|arachnid|ettercap/, '🕷️'],
+  [/scorpion/, '🦂'],
+  [/snake|serpent|naga|viper|cobra|python|couatl/, '🐍'],
+  [/rat|mouse|mole|weasel/, '🐀'],
+  [/bat/, '🦇'],
+  [/boar|pig|hog|swine/, '🐗'],
+  [/horse|steed|mare|stallion|pony|nightmare/, '🐴'],
+  [/minotaur|bull|ox|cow|cattle/, '🐂'],
+  [/lion|tiger|panther|leopard|jaguar|cougar|puma|cat|lynx/, '🦁'],
+  [/ape|gorilla|monkey|baboon/, '🦍'],
+  [/crab/, '🦀'],
+  [/octopus|kraken|squid/, '🐙'],
+  [/shark|fish|piranha|sahuagin/, '🦈'],
+  [/frog|toad/, '🐸'],
+  [/eagle|hawk|raven|crow|vulture|owl|harpy|roc|bird|cockatrice/, '🦅'],
+  [/beetle|insect|mantis|\bant\b|swarm/, '🪲'],
+  [/worm|grub|slug/, '🪱'],
+  [/bee|wasp/, '🐝'],
+  // giants before element themes, so "Fire Giant" reads as a giant while a
+  // pure "Fire Elemental" still gets 🔥 (via its name or type line)
+  [/giant|titan|goliath|ettin/, '🗿'],
+  [/fire|flame|magma|lava|salamander/, '🔥'],
+  [/ice|frost|snow/, '❄️'],
+  [/tree|treant|plant|shrub|vine|fungus|myconid|shambling|awakened/, '🌳'],
+  [/slime|ooze|jelly|pudding|cube|slaad/, '🫧'],
+  [/beholder|\beye\b|gazer/, '👁️'],
+  [/golem|construct|statue|guardian|automaton|animated/, '🗿'],
+  [/hag|witch|crone/, '🧙‍♀️'],
+  [/merfolk|merrow|siren|triton|mermaid/, '🧜'],
+  [/fairy|pixie|sprite|nymph|dryad|fey|satyr/, '🧚'],
+  [/unicorn|pegasus/, '🦄'],
+  [/dinosaur|raptor|rex|saur|allosaur/, '🦖'],
+  [/crocodile|alligator|croc/, '🐊'],
+  [/elephant|mammoth|behemoth/, '🐘'],
+  [/rhino/, '🦏'],
+  [/deer|elk|stag|hart/, '🦌'],
+  [/goat|ram/, '🐐'],
+  [/turtle|tortoise|dragon turtle/, '🐢'],
+  [/dragonborn/, '🐲'],
+]
+
+// D&D creature-type line → category emoji (used when the name has no keyword).
+const TYPE_EMOJI: [string, string][] = [
+  ['dragon', '🐉'], ['undead', '💀'], ['fiend', '👿'], ['celestial', '😇'],
+  ['fey', '🧚'], ['aberration', '👁️'], ['construct', '🗿'], ['elemental', '🔥'],
+  ['giant', '🗿'], ['ooze', '🫧'], ['plant', '🌳'], ['beast', '🐾'],
+  ['monstrosity', '🐲'], ['humanoid', '🧑'],
+]
+
+const HEROES = ['🧝', '🧙', '🧚', '🦸', '🥷', '🧑‍🎤', '🧑‍🌾', '🤺']
 
 function hash(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return h
 }
+
 function spriteFor(c: Combatant): string {
-  const pool = c.isPC ? HEROES : FOES
-  return pool[hash(c.name) % pool.length]
+  if (c.isPC) return HEROES[hash(c.name) % HEROES.length]
+  const name = c.name.toLowerCase()
+  for (const [re, emoji] of NAME_EMOJI) if (re.test(name)) return emoji
+  const type = (c.type ?? '').toLowerCase()
+  for (const [key, emoji] of TYPE_EMOJI) if (type.includes(key)) return emoji
+  return '👾'
 }
 
 // ── turn-order ribbon ───────────────────────────────────────────

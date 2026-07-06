@@ -10,6 +10,7 @@ const EMPTY: Statblock = {
   hitDice: '2d8',
   speed: '30 ft',
   cr: '1/4',
+  type: 'humanoid',
   abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
   actions: [],
 }
@@ -57,6 +58,12 @@ export function StatblockEditor({ entity }: { entity: Entity }) {
         </Field>
         <Field label="CR">
           <TextInput value={sb.cr} onChange={(cr) => patch({ cr })} />
+        </Field>
+        <Field label="Type">
+          <TextInput
+            value={sb.type ?? ''}
+            onChange={(type) => patch({ type })}
+          />
         </Field>
       </div>
 

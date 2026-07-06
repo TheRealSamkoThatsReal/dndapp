@@ -61,6 +61,9 @@ export interface Statblock {
   hitDice: string // e.g. "2d8+2"
   speed: string
   cr: string // challenge rating, e.g. "1/4"
+  /** D&D creature type line, e.g. "dragon" or "humanoid (elf)" — drives the
+   *  battle-view sprite. Optional; older statblocks predate it. */
+  type?: string
   abilities: Ability
   actions: StatblockAction[]
 }
@@ -126,6 +129,8 @@ export interface Combatant {
   tempHp: number
   conditions: Condition[]
   isPC: boolean
+  /** D&D creature type line, carried through for the battle-view sprite */
+  type?: string
 }
 
 export interface Encounter extends SyncMeta {

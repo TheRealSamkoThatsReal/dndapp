@@ -19,6 +19,7 @@ interface Template {
   maxHp: number
   currentHp: number
   initMod: number
+  type?: string
 }
 
 const fmt = (m: number) => `${m >= 0 ? '+' : ''}${m}`
@@ -36,6 +37,7 @@ async function resolveRef(id: string): Promise<Template | null> {
       maxHp: sb?.hp ?? 1,
       currentHp: sb?.hp ?? 1,
       initMod: sb ? abilityMod(sb.abilities.dex) : 0,
+      type: sb?.type,
     }
   }
   const pc = await db.characters.get(id)
@@ -48,6 +50,7 @@ async function resolveRef(id: string): Promise<Template | null> {
       maxHp: pc.maxHp,
       currentHp: pc.currentHp,
       initMod: abilityMod(pc.abilities.dex),
+      type: 'humanoid',
     }
   }
   return null
@@ -83,6 +86,7 @@ export async function hydrateCombatants(refs: string[]): Promise<Combatant[]> {
         tempHp: 0,
         conditions: [],
         isPC: t.isPC,
+        type: t.type,
       } satisfies Combatant
     })
     .sort((a, b) => b.initiative - a.initiative)

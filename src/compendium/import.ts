@@ -95,6 +95,7 @@ export function monsterToEntityFields(m: CompMonster) {
       hitDice: m.hitDice,
       speed: m.speed,
       cr: m.cr,
+      type: m.type,
       abilities: {
         str: m.str, dex: m.dex, con: m.con,
         int: m.int, wis: m.wis, cha: m.cha,
