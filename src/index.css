@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* ── Grimoire theme ─────────────────────────────────────────────
+   Warm, tactile "aged parchment + candlelight" palette.
+   Dark is the primary at-the-table mode; light is supported. */
+@theme {
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* ink = text, parchment = surfaces, ember = accent, blood = danger */
+  --color-parchment-50: #faf6ee;
+  --color-parchment-100: #f3ebdd;
+  --color-parchment-200: #e6d6ba;
+  --color-parchment-300: #d4bd94;
+
+  --color-ink-700: #3a3128;
+  --color-ink-800: #262019;
+  --color-ink-900: #1a1512;
+  --color-ink-950: #120e0b;
+
+  --color-ember-400: #e8a44c;
+  --color-ember-500: #d6872b;
+  --color-ember-600: #b96a1c;
+
+  --color-blood-500: #b23a3a;
+  --color-blood-600: #963030;
+
+  --color-moss-500: #6b8a4f;
+  --color-arcane-500: #7c6bd6;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  @apply bg-parchment-100 text-ink-800;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-ink-900 text-parchment-100;
+  }
+}
+
+/* thin ornamental scrollbars that suit the dark UI */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+}
