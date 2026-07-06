@@ -3,6 +3,8 @@
 An offline-first PWA for running D&D: campaign wiki, session logs, combat
 tracker, and character sheets — all local-first, synced across your devices.
 
+**Live:** https://therealsamkothatsreal.github.io/dndapp/
+
 ## Stack
 
 - **React 19 + TypeScript + Vite 8**
@@ -41,6 +43,20 @@ IndexedDB and shows a "Local only" badge.
 
 > **Tip for quick testing:** in Supabase **Authentication → Providers → Email**,
 > turn off "Confirm email" so password sign-up works without an inbox round-trip.
+
+## Deployment
+
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds with
+the `VITE_SUPABASE_*` values stored as GitHub Actions **secrets** and publishes
+to GitHub Pages. (The anon key is a public client key — safe to ship; RLS is
+the real security boundary.)
+
+For **magic-link / email-confirmation** sign-in on the live site, add the Pages
+URL to Supabase → **Authentication → URL Configuration**:
+- Site URL: `https://therealsamkothatsreal.github.io/dndapp/`
+- Redirect URLs: `https://therealsamkothatsreal.github.io/dndapp/`
+
+Email + password sign-in works without this.
 
 ## How sync works
 
