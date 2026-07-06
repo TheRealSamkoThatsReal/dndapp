@@ -146,6 +146,30 @@ export async function joinCampaign(
   return { ok: true, campaignId: data as string }
 }
 
+/** Leave a campaign you joined: drop membership server-side, then purge the
+ *  read-only shared copies locally (your own characters are kept). */
+export async function leaveCampaign(
+  userId: string,
+  campaignId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (supabase) {
+    const { error } = await supabase
+      .from('campaign_members')
+      .delete()
+      .eq('campaign_id', campaignId)
+      .eq('user_id', userId)
+    if (error) return { ok: false, error: error.message }
+  }
+  await db.campaigns.delete(campaignId)
+  await db.encounters.where({ campaignId }).delete()
+  // remove pulled party-wiki entries we don't own (keep our own contributions)
+  await db.sharedEntities
+    .where({ campaignId })
+    .filter((e) => e.ownerId !== userId)
+    .delete()
+  return { ok: true }
+}
+
 /** Subscribe to realtime changes so other devices' edits arrive quickly. */
 export function subscribeRealtime(userId: string, onChange: () => void) {
   if (!supabase) return () => {}

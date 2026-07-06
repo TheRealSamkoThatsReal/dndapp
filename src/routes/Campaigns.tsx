@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, isLive } from '../db/db'
-import { createCampaign } from '../db/repo'
+import { createCampaign, deleteCampaign } from '../db/repo'
 import { useAuth } from '../auth/AuthProvider'
-import { joinCampaign } from '../sync/engine'
+import { joinCampaign, leaveCampaign } from '../sync/engine'
 import { Button, Card, EmptyState, PageHeader } from '../ui/kit'
 import { roleFor } from './CampaignLayout'
 
@@ -53,6 +53,16 @@ export default function Campaigns() {
 
   const open = (id: string, role: 'dm' | 'player') =>
     navigate(role === 'player' ? `/c/${id}/combat` : `/c/${id}`)
+
+  async function remove(id: string, name: string, role: 'dm' | 'player') {
+    if (role === 'player') {
+      if (!confirm(`Leave "${name}"? You can rejoin with the invite code.`)) return
+      if (myUid) await leaveCampaign(myUid, id)
+    } else {
+      if (!confirm(`Delete "${name}"? This removes its wiki, sessions, and encounters. This cannot be undone.`)) return
+      await deleteCampaign(id)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -151,9 +161,20 @@ export default function Campaigns() {
                 <p className="mt-1 line-clamp-2 text-sm text-parchment-300/60">
                   {c.blurb || (role === 'player' ? 'A campaign you joined.' : 'No description yet.')}
                 </p>
-                <p className="mt-3 text-xs text-parchment-300/40">
-                  Updated {new Date(c.updatedAt).toLocaleDateString()}
-                </p>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-parchment-300/40">
+                    Updated {new Date(c.updatedAt).toLocaleDateString()}
+                  </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      remove(c.id, c.name, role)
+                    }}
+                    className="rounded px-2 py-0.5 text-xs text-parchment-300/40 hover:bg-blood-600/20 hover:text-blood-500"
+                  >
+                    {role === 'player' ? 'Leave' : 'Delete'}
+                  </button>
+                </div>
               </div>
             </Card>
           )

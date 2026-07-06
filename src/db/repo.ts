@@ -54,6 +54,7 @@ export async function deleteCampaign(id: string) {
     db.sessions.where({ campaignId: id }).modify(tomb),
     db.entities.where({ campaignId: id }).modify(tomb),
     db.encounters.where({ campaignId: id }).modify(tomb),
+    db.sharedEntities.where({ campaignId: id }).modify(tomb),
   ])
 }
 
