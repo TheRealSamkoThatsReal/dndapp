@@ -22,6 +22,7 @@ export function makeAdHoc(
     tempHp: 0,
     conditions: [],
     isPC: false,
+    speed: 30,
   }
 }
 

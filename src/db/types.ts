@@ -146,6 +146,8 @@ export interface Combatant {
   isPC: boolean
   /** D&D creature type line, carried through for the battle-view sprite */
   type?: string
+  /** walking speed in feet, for battlemap movement range (default 30) */
+  speed?: number
   /** battlemap position (DM-authoritative; PCs override via a token row) */
   pos?: GridPos
 }

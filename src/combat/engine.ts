@@ -20,9 +20,16 @@ interface Template {
   currentHp: number
   initMod: number
   type?: string
+  speed: number
 }
 
 const fmt = (m: number) => `${m >= 0 ? '+' : ''}${m}`
+
+/** Pull the first number out of a speed line like "walk 30 ft." → 30. */
+const parseSpeed = (s: string | undefined): number => {
+  const m = /\d+/.exec(s ?? '')
+  return m ? parseInt(m[0], 10) : 30
+}
 
 /** Resolve a member ref (entity or character id) to a combatant template. */
 async function resolveRef(id: string): Promise<Template | null> {
@@ -38,6 +45,7 @@ async function resolveRef(id: string): Promise<Template | null> {
       currentHp: sb?.hp ?? 1,
       initMod: sb ? abilityMod(sb.abilities.dex) : 0,
       type: sb?.type,
+      speed: parseSpeed(sb?.speed),
     }
   }
   const pc = await db.characters.get(id)
@@ -51,6 +59,7 @@ async function resolveRef(id: string): Promise<Template | null> {
       currentHp: pc.currentHp,
       initMod: abilityMod(pc.abilities.dex),
       type: 'humanoid',
+      speed: pc.speed || 30,
     }
   }
   return null
@@ -87,6 +96,7 @@ export async function hydrateCombatants(refs: string[]): Promise<Combatant[]> {
         conditions: [],
         isPC: t.isPC,
         type: t.type,
+        speed: t.speed,
       } satisfies Combatant
     })
     .sort((a, b) => b.initiative - a.initiative)

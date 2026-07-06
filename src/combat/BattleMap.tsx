@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, isLive } from '../db/db'
 import {
@@ -78,17 +78,47 @@ export function BattleMap({
       ? !c.isPC
       : c.isPC && myCharSet.has(c.sourceId ?? '') && currentId === c.id
 
+  // Per-turn movement budget, reset whenever the active turn changes. Tracked
+  // per-client for the mover (authoritative enough for a friendly table).
+  const turnKey = `${active.round}:${active.turnIndex}`
+  const usedRef = useRef<Record<string, number>>({})
+  const turnRef = useRef(turnKey)
+  if (turnRef.current !== turnKey) {
+    usedRef.current = {}
+    turnRef.current = turnKey
+  }
+
+  const selected = selectedId ? placed.find((p) => p.c.id === selectedId) : null
+  const selCanMove = selected ? canMove(selected.c) : false
+  let reachable = new Map<string, number>()
+  let remaining = 0
+  if (selected && selCanMove) {
+    const speed = speedSquares(selected.c)
+    const used = usedRef.current[selected.c.id] ?? 0
+    // off-turn DM repositioning gets full speed each move; the active creature
+    // spends from a shared per-turn budget
+    remaining = selected.c.id === currentId ? Math.max(0, speed - used) : speed
+    const blocked = new Set(walls)
+    for (const { c, pos } of placed) {
+      if (c.id !== selected.c.id) blocked.add(`${pos.x},${pos.y}`)
+    }
+    reachable = reachableFrom(selected.pos, remaining, blocked, grid.cols, grid.rows)
+  }
+
   function onCell(x: number, y: number) {
     if (wallMode && role === 'dm') {
       toggleWall(encounter, x, y)
       return
     }
-    const sel = selectedId ? combatants.find((c) => c.id === selectedId) : null
-    if (sel && canMove(sel)) {
+    if (selected && selCanMove) {
       const key = `${x},${y}`
-      if (walls.has(key) || occupant.has(key)) return // blocked / occupied
-      if (sel.isPC) moveToken(encounter.campaignId, encounter.id, sel, x, y, authorName)
-      else moveCombatantPos(encounter, sel.id, x, y)
+      const cost = reachable.get(key)
+      if (!cost) return // unreachable / out of range — keep selection
+      if (selected.c.id === currentId) {
+        usedRef.current[selected.c.id] = (usedRef.current[selected.c.id] ?? 0) + cost
+      }
+      if (selected.c.isPC) moveToken(encounter.campaignId, encounter.id, selected.c, x, y, authorName)
+      else moveCombatantPos(encounter, selected.c.id, x, y)
       setSelectedId(null)
       return
     }
@@ -129,6 +159,11 @@ export function BattleMap({
             Tap a creature for info. On your turn, tap your token then a cell to move.
           </span>
         )}
+        {selected && selCanMove && (
+          <span className="ml-auto rounded-full border border-ember-500/50 px-2.5 py-0.5 text-xs text-ember-400">
+            🥾 {remaining} sq · {remaining * 5} ft left
+          </span>
+        )}
       </div>
 
       {/* map */}
@@ -149,6 +184,7 @@ export function BattleMap({
               const x = i % grid.cols
               const y = Math.floor(i / grid.cols)
               const isWall = walls.has(`${x},${y}`)
+              const inRange = (reachable.get(`${x},${y}`) ?? 0) > 0
               return (
                 <div
                   key={i}
@@ -160,6 +196,9 @@ export function BattleMap({
                     backgroundImage: isWall
                       ? 'repeating-linear-gradient(45deg,rgba(0,0,0,.25) 0 4px,transparent 4px 8px)'
                       : undefined,
+                    // reachable cells glow while a token is selected for moving
+                    background: inRange ? 'rgba(214,135,43,0.22)' : undefined,
+                    boxShadow: inRange ? 'inset 0 0 0 1px rgba(214,135,43,0.45)' : undefined,
                   }}
                 />
               )
@@ -324,4 +363,41 @@ function defaultPos(i: number, isPC: boolean, grid: { cols: number; rows: number
   const band = Math.floor(i / grid.cols)
   const y = isPC ? grid.rows - 1 - band : band
   return { x: col, y: Math.max(0, Math.min(grid.rows - 1, y)) }
+}
+
+// squares of movement from a speed in feet (5 ft per square, min 1)
+const speedSquares = (c: Combatant) => Math.max(1, Math.round((c.speed ?? 30) / 5))
+
+const DIRS = [
+  [1, 0], [-1, 0], [0, 1], [0, -1],
+  [1, 1], [1, -1], [-1, 1], [-1, -1],
+]
+
+/** Cells reachable within `budget` steps, pathing around walls and other
+ *  creatures. Diagonals cost one square (basic 5e). Returns cell → step cost. */
+function reachableFrom(
+  start: GridPos,
+  budget: number,
+  blocked: Set<string>,
+  cols: number,
+  rows: number,
+): Map<string, number> {
+  const dist = new Map<string, number>([[`${start.x},${start.y}`, 0]])
+  let frontier: GridPos[] = [start]
+  for (let step = 0; step < budget && frontier.length; step++) {
+    const next: GridPos[] = []
+    for (const { x, y } of frontier) {
+      for (const [dx, dy] of DIRS) {
+        const nx = x + dx
+        const ny = y + dy
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue
+        const key = `${nx},${ny}`
+        if (dist.has(key) || blocked.has(key)) continue
+        dist.set(key, step + 1)
+        next.push({ x: nx, y: ny })
+      }
+    }
+    frontier = next
+  }
+  return dist
 }
