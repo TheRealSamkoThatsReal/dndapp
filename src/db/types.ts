@@ -30,6 +30,16 @@ export interface SharedEntity extends SyncMeta {
   notes: string
   /** display name of whoever created it */
   authorName: string
+  /** when set, this row is a battlemap token position (not a wiki entry) —
+   *  players write their own PC's position here since they can't write the
+   *  DM-owned encounter. Everyone in the campaign can read it. */
+  token?: {
+    encounterId: string
+    combatantId: string
+    sourceId: string | null
+    x: number
+    y: number
+  }
 }
 
 export interface Session extends SyncMeta {
@@ -117,6 +127,11 @@ export interface Condition {
   rounds: number | null
 }
 
+export interface GridPos {
+  x: number
+  y: number
+}
+
 export interface Combatant {
   id: string
   name: string
@@ -131,6 +146,8 @@ export interface Combatant {
   isPC: boolean
   /** D&D creature type line, carried through for the battle-view sprite */
   type?: string
+  /** battlemap position (DM-authoritative; PCs override via a token row) */
+  pos?: GridPos
 }
 
 export interface Encounter extends SyncMeta {
@@ -143,6 +160,10 @@ export interface Encounter extends SyncMeta {
     round: number
     turnIndex: number
     combatants: Combatant[]
+    /** battlemap grid size (defaults applied when absent) */
+    grid?: { cols: number; rows: number }
+    /** filled wall cells, as "x,y" strings */
+    walls?: string[]
   } | null
 }
 

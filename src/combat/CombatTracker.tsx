@@ -4,10 +4,12 @@ import type { Combatant, Encounter } from '../db/types'
 import { Button } from '../ui/kit'
 import { advanceTurn, makeAdHoc, resortByInitiative, type Active } from './engine'
 import { CombatantRow } from './CombatantRow'
+import { BattleMap } from './BattleMap'
 
 export function CombatTracker({ encounter }: { encounter: Encounter }) {
   const active = encounter.active!
   const [adHoc, setAdHoc] = useState(false)
+  const [showMap, setShowMap] = useState(true)
   const [form, setForm] = useState({ name: '', hp: '10', ac: '12', init: '10' })
 
   const save = (next: Active) => updateEncounter(encounter.id, { active: next })
@@ -57,12 +59,17 @@ export function CombatTracker({ encounter }: { encounter: Encounter }) {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Button onClick={() => setShowMap((m) => !m)}>
+            {showMap ? '🗺️ Hide map' : '🗺️ Map'}
+          </Button>
           <Button onClick={() => save(advanceTurn(active, -1))}>← Prev</Button>
           <Button variant="primary" onClick={() => save(advanceTurn(active, 1))}>
             Next turn →
           </Button>
         </div>
       </div>
+
+      {showMap && <BattleMap encounter={encounter} role="dm" />}
 
       {/* combatant list, in initiative order */}
       <div className="space-y-2">

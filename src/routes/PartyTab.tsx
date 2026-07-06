@@ -26,7 +26,8 @@ export default function PartyTab() {
     () =>
       db.sharedEntities
         .where({ campaignId: campaign.id })
-        .filter(isLive)
+        // exclude battlemap token rows — they live here for sync but aren't wiki entries
+        .filter((e) => isLive(e) && !e.token)
         .toArray()
         .then((r) => r.sort((a, b) => a.name.localeCompare(b.name))),
     [campaign.id],

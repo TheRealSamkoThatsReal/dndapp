@@ -122,6 +122,70 @@ export async function updateSharedEntity(id: string, patch: Partial<SharedEntity
 
 export const deleteSharedEntity = (id: string) => softDelete(db.sharedEntities, id)
 
+// ── Battlemap ───────────────────────────────────────────────────
+export const DEFAULT_GRID = { cols: 16, rows: 12 }
+
+/** DM: toggle a wall cell on the encounter. */
+export async function toggleWall(enc: Encounter, x: number, y: number) {
+  if (!enc.active) return
+  const key = `${x},${y}`
+  const walls = new Set(enc.active.walls ?? [])
+  walls.has(key) ? walls.delete(key) : walls.add(key)
+  await updateEncounter(enc.id, { active: { ...enc.active, walls: [...walls] } })
+}
+
+/** DM: set the grid size. */
+export async function setGrid(enc: Encounter, cols: number, rows: number) {
+  if (!enc.active) return
+  await updateEncounter(enc.id, { active: { ...enc.active, grid: { cols, rows } } })
+}
+
+/** DM: move a combatant's authoritative position (used for monsters). */
+export async function moveCombatantPos(
+  enc: Encounter,
+  combatantId: string,
+  x: number,
+  y: number,
+) {
+  if (!enc.active) return
+  const combatants = enc.active.combatants.map((c) =>
+    c.id === combatantId ? { ...c, pos: { x, y } } : c,
+  )
+  await updateEncounter(enc.id, { active: { ...enc.active, combatants } })
+}
+
+const tokenId = (encounterId: string, key: string) => `token:${encounterId}:${key}`
+
+/** Player: move their own PC token. Stored as a shared-party row (which they
+ *  can write and everyone can read), keyed deterministically per PC+encounter. */
+export async function moveToken(
+  campaignId: string,
+  encounterId: string,
+  combatant: { id: string; name: string; sourceId: string | null },
+  x: number,
+  y: number,
+  authorName: string,
+) {
+  const key = combatant.sourceId ?? combatant.id
+  const id = tokenId(encounterId, key)
+  const token = { encounterId, combatantId: combatant.id, sourceId: combatant.sourceId, x, y }
+  const existing = await db.sharedEntities.get(id)
+  if (existing) {
+    await db.sharedEntities.update(id, { token, _dirty: 1, updatedAt: Date.now() })
+  } else {
+    await db.sharedEntities.add({
+      ...newMeta(),
+      id,
+      campaignId,
+      kind: 'npc',
+      name: `${combatant.name} (token)`,
+      notes: '',
+      authorName,
+      token,
+    })
+  }
+}
+
 // ── Sessions ────────────────────────────────────────────────────
 export async function createSession(campaignId: string) {
   const count = await db.sessions
