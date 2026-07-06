@@ -5,6 +5,7 @@ import type {
   Encounter,
   Entity,
   Session,
+  SharedEntity,
   SyncMeta,
 } from './types'
 import type { CompItem, CompMonster, CompSpell } from '../compendium/types'
@@ -17,6 +18,7 @@ export class GrimoireDB extends Dexie {
   entities!: EntityTable<Entity, 'id'>
   characters!: EntityTable<Character, 'id'>
   encounters!: EntityTable<Encounter, 'id'>
+  sharedEntities!: EntityTable<SharedEntity, 'id'>
   // Compendium tables are device-local reference data — NOT synced (they are
   // absent from the sync engine's table list). Auto-increment ids.
   compMonsters!: EntityTable<CompMonster, 'id'>
@@ -38,6 +40,10 @@ export class GrimoireDB extends Dexie {
       compMonsters: '++id, search, cr',
       compSpells: '++id, search, level',
       compItems: '++id, search',
+    })
+    // v3 adds the collaborative party wiki (synced, unlike the compendium).
+    this.version(3).stores({
+      sharedEntities: 'id, campaignId, _dirty, _deleted',
     })
   }
 }

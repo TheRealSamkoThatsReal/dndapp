@@ -9,8 +9,11 @@ import { CharacterSheet } from '../characters/CharacterSheet'
 import { abilityMod, formatMod } from '../db/types'
 
 export default function CharactersTab() {
-  const { campaign } = useOutletContext<CampaignContext>()
+  const { campaign, myUid } = useOutletContext<CampaignContext>()
   const [openId, setOpenId] = useState<string | null>(null)
+
+  // A character owned by someone else (a player's, seen by the DM) is read-only.
+  const isMine = (ownerId: string | null) => !ownerId || ownerId === myUid
 
   const characters = useLiveQuery(
     () =>
@@ -33,7 +36,7 @@ export default function CharactersTab() {
         >
           ← All characters
         </button>
-        <CharacterSheet character={open} />
+        <CharacterSheet character={open} readOnly={!isMine(open.ownerId)} />
       </div>
     )
   }
@@ -67,7 +70,14 @@ export default function CharactersTab() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {characters?.map((c) => (
           <Card key={c.id} className="p-4" onClick={() => setOpenId(c.id)}>
-            <h3 className="font-serif text-lg text-parchment-50">{c.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="flex-1 font-serif text-lg text-parchment-50">{c.name}</h3>
+              {!isMine(c.ownerId) && (
+                <span className="rounded-full bg-arcane-500/20 px-2 py-0.5 text-xs text-arcane-500">
+                  Player
+                </span>
+              )}
+            </div>
             <p className="text-sm text-parchment-300/60">
               {[c.ancestry, c.className && `${c.className} ${c.level}`]
                 .filter(Boolean)

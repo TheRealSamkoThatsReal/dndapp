@@ -11,6 +11,7 @@ const TABLES: { remote: string; local: EntityTable<SyncMeta, 'id'> }[] = [
   { remote: 'entities', local: db.entities as EntityTable<SyncMeta, 'id'> },
   { remote: 'characters', local: db.characters as EntityTable<SyncMeta, 'id'> },
   { remote: 'encounters', local: db.encounters as EntityTable<SyncMeta, 'id'> },
+  { remote: 'shared_entities', local: db.sharedEntities as EntityTable<SyncMeta, 'id'> },
 ]
 
 const cursorKey = (userId: string, remote: string) =>
@@ -45,7 +46,12 @@ async function pushTable(
   remote: string,
   local: EntityTable<SyncMeta, 'id'>,
 ) {
-  const dirty = await local.filter((r) => r._dirty === 1).toArray()
+  // Only push records this user OWNS (or hasn't claimed yet). Shared data
+  // pulled from a DM/other member stays read-only locally — never re-pushed
+  // (and RLS would reject it anyway).
+  const dirty = await local
+    .filter((r) => r._dirty === 1 && (r.ownerId === userId || r.ownerId === null))
+    .toArray()
   if (!dirty.length) return
 
   const rows = dirty.map((r) => ({
@@ -124,6 +130,20 @@ export async function syncNow(userId: string) {
   } finally {
     running = false
   }
+}
+
+/** Redeem an invite code via the server-side join function, then pull. */
+export async function joinCampaign(
+  userId: string,
+  code: string,
+): Promise<{ ok: boolean; error?: string; campaignId?: string }> {
+  if (!supabase) return { ok: false, error: 'Sync is not configured.' }
+  const { data, error } = await supabase.rpc('join_campaign', {
+    code: code.trim().toUpperCase(),
+  })
+  if (error) return { ok: false, error: error.message }
+  await syncNow(userId) // fetch the newly-accessible campaign + combat
+  return { ok: true, campaignId: data as string }
 }
 
 /** Subscribe to realtime changes so other devices' edits arrive quickly. */

@@ -10,7 +10,7 @@ import { NotesEditor } from '../components/NotesEditor'
 type Pane = 'prep' | 'log' | 'recap'
 
 export default function SessionsTab() {
-  const { campaign } = useOutletContext<CampaignContext>()
+  const { campaign, role } = useOutletContext<CampaignContext>()
   const [openId, setOpenId] = useState<string | null>(null)
   const [pane, setPane] = useState<Pane>('prep')
 
@@ -23,6 +23,16 @@ export default function SessionsTab() {
         .then((rows) => rows.sort((a, b) => b.number - a.number)),
     [campaign.id],
   )
+
+  if (role === 'player') {
+    return (
+      <EmptyState
+        icon="🔒"
+        title="DM's session notes"
+        hint="Session prep and recaps live in the DM's private space."
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">

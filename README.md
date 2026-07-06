@@ -67,6 +67,21 @@ URL to Supabase → **Authentication → URL Configuration**:
 
 Email + password sign-in works without this.
 
+## Multiplayer (campaign sharing)
+
+Each campaign has an **invite code** (shown in the campaign header). Players
+sign in, hit **Join with code** on the Campaigns page, and enter it. Then:
+
+- Players see a **live, read-only combat view** and a **collaborative Party
+  wiki** (anyone can add entries, everyone reads them).
+- Player **character sheets sync to the DM** (read-only for the DM).
+- The DM's private **Wiki and Sessions stay hidden** from players.
+
+Sharing is enforced by Postgres row-level security — run
+[`supabase/multiplayer.sql`](supabase/multiplayer.sql) once in the SQL editor
+(after `schema.sql`) to create the membership table, party-wiki table,
+`join_campaign()` function, and the sharing policies. Safe to re-run.
+
 ## How sync works
 
 - IndexedDB is the source of truth; the UI never waits on the network.

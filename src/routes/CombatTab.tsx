@@ -7,10 +7,14 @@ import { Button, Card, EmptyState } from '../ui/kit'
 import type { CampaignContext } from './CampaignLayout'
 import { EncounterBuilder } from '../combat/EncounterBuilder'
 import { CombatTracker } from '../combat/CombatTracker'
+import PlayerCombatView from '../combat/PlayerCombatView'
 
 export default function CombatTab() {
-  const { campaign } = useOutletContext<CampaignContext>()
+  const { campaign, role } = useOutletContext<CampaignContext>()
   const [openId, setOpenId] = useState<string | null>(null)
+
+  // Players get the live, read-only spectator view.
+  if (role === 'player') return <PlayerCombatView />
 
   const encounters = useLiveQuery(
     () =>

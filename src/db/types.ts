@@ -16,7 +16,20 @@ export interface Campaign extends SyncMeta {
   blurb: string
   /** hue used to tint the campaign's cover card */
   accent: string
+  /** short code players enter to join; '' until the DM generates one */
+  inviteCode: string
   createdAt: number
+}
+
+/** Collaborative party-wiki entry: any campaign member can add, all can read.
+ *  Lives in its own table so it can never expose the DM's private wiki. */
+export interface SharedEntity extends SyncMeta {
+  campaignId: string
+  kind: EntityKind
+  name: string
+  notes: string
+  /** display name of whoever created it */
+  authorName: string
 }
 
 export interface Session extends SyncMeta {

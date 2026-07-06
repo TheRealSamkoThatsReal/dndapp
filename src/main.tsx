@@ -12,6 +12,7 @@ import EntitiesTab from './routes/EntitiesTab.tsx'
 import SessionsTab from './routes/SessionsTab.tsx'
 import CombatTab from './routes/CombatTab.tsx'
 import CharactersTab from './routes/CharactersTab.tsx'
+import PartyTab from './routes/PartyTab.tsx'
 
 // Vite's BASE_URL is '/dndapp/' in the Pages build and '/' in dev.
 // React Router wants a basename without a trailing slash.
@@ -31,6 +32,7 @@ const router = createBrowserRouter(
           { index: true, element: <EntitiesTab /> },
           { path: 'sessions', element: <SessionsTab /> },
           { path: 'combat', element: <CombatTab /> },
+          { path: 'party', element: <PartyTab /> },
           { path: 'characters', element: <CharactersTab /> },
         ],
       },

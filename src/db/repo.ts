@@ -6,11 +6,20 @@ import type {
   Entity,
   EntityKind,
   Session,
+  SharedEntity,
 } from './types'
 import type { CompMonster } from '../compendium/types'
 import { monsterToEntityFields } from '../compendium/import'
 
 // ── Campaigns ───────────────────────────────────────────────────
+
+// Readable code without ambiguous chars (no 0/O/1/I).
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+export function makeInviteCode(len = 6): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(len))
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('')
+}
+
 export async function createCampaign(name: string, accent = '#d6872b') {
   const now = Date.now()
   const campaign: Campaign = {
@@ -18,10 +27,19 @@ export async function createCampaign(name: string, accent = '#d6872b') {
     name: name.trim() || 'Untitled Campaign',
     blurb: '',
     accent,
+    inviteCode: makeInviteCode(),
     createdAt: now,
   }
   await db.campaigns.add(campaign)
   return campaign
+}
+
+/** Ensure a campaign has an invite code (older campaigns predate the field). */
+export async function ensureInviteCode(campaign: Campaign) {
+  if (campaign.inviteCode) return campaign.inviteCode
+  const code = makeInviteCode()
+  await updateCampaign(campaign.id, { inviteCode: code })
+  return code
 }
 
 export async function updateCampaign(id: string, patch: Partial<Campaign>) {
@@ -78,6 +96,30 @@ export async function addMonsterEntity(campaignId: string, m: CompMonster) {
   await db.entities.add(entity)
   return entity
 }
+
+// ── Shared party wiki (collaborative) ───────────────────────────
+export async function createSharedEntity(
+  campaignId: string,
+  kind: EntityKind,
+  authorName: string,
+) {
+  const entry: SharedEntity = {
+    ...newMeta(),
+    campaignId,
+    kind,
+    name: `New ${kind}`,
+    notes: '',
+    authorName: authorName || 'A player',
+  }
+  await db.sharedEntities.add(entry)
+  return entry
+}
+
+export async function updateSharedEntity(id: string, patch: Partial<SharedEntity>) {
+  await db.sharedEntities.update(id, { ...patch, _dirty: 1, updatedAt: Date.now() })
+}
+
+export const deleteSharedEntity = (id: string) => softDelete(db.sharedEntities, id)
 
 // ── Sessions ────────────────────────────────────────────────────
 export async function createSession(campaignId: string) {

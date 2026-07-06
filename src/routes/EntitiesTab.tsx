@@ -13,7 +13,7 @@ import { CompendiumModal } from '../compendium/CompendiumModal'
 const KINDS: EntityKind[] = ['npc', 'location', 'quest', 'item', 'monster']
 
 export default function EntitiesTab() {
-  const { campaign } = useOutletContext<CampaignContext>()
+  const { campaign, role } = useOutletContext<CampaignContext>()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filter, setFilter] = useState<EntityKind | 'all'>('all')
   const [compendium, setCompendium] = useState(false)
@@ -36,6 +36,16 @@ export default function EntitiesTab() {
     const e = await createEntity(campaign.id, kind, '')
     setSelectedId(e.id)
     setFilter('all')
+  }
+
+  if (role === 'player') {
+    return (
+      <EmptyState
+        icon="🔒"
+        title="DM's private wiki"
+        hint="This is the DM's prep space. Head to the Party tab for shared notes everyone can edit."
+      />
+    )
   }
 
   return (

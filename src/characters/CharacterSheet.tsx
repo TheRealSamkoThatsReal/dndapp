@@ -18,9 +18,18 @@ const SKILLS: [string, keyof Ability][] = [
   ['Sleight of Hand', 'dex'], ['Stealth', 'dex'], ['Survival', 'wis'],
 ]
 
-export function CharacterSheet({ character: c }: { character: Character }) {
+export function CharacterSheet({
+  character: c,
+  readOnly = false,
+}: {
+  character: Character
+  readOnly?: boolean
+}) {
   const { roll } = useDice()
-  const set = (patch: Partial<Character>) => updateCharacter(c.id, patch)
+  const set = (patch: Partial<Character>) => {
+    if (readOnly) return
+    updateCharacter(c.id, patch)
+  }
 
   const isProf = (key: string) => c.proficiencies.includes(key)
   const toggleProf = (key: string) =>
@@ -40,7 +49,15 @@ export function CharacterSheet({ character: c }: { character: Character }) {
     roll(`1d20${formatMod(mod)}`, 'normal', `${c.name} · ${label}`)
 
   return (
-    <div className="space-y-4">
+    // A disabled fieldset makes every control inside inert — the robust way to
+    // render a player's sheet read-only for the DM (also blocks the spell-slot
+    // and inventory inputs that write directly).
+    <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-4 border-0 p-0">
+      {readOnly && (
+        <div className="rounded-lg border border-arcane-500/40 bg-arcane-500/10 px-3 py-2 text-sm text-arcane-500">
+          🔒 Player's sheet — read-only
+        </div>
+      )}
       {/* identity */}
       <Card className="p-4">
         <input
@@ -169,7 +186,7 @@ export function CharacterSheet({ character: c }: { character: Character }) {
           className="min-h-32 w-full resize-y bg-transparent text-sm text-parchment-100 outline-none"
         />
       </Card>
-    </div>
+    </fieldset>
   )
 }
 
