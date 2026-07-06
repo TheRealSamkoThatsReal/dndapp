@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { claimLocalData, subscribeRealtime, syncNow } from './engine'
+import { onLocalWrite } from './bus'
 
 type Status = 'local' | 'offline' | 'syncing' | 'synced'
 
@@ -23,7 +24,10 @@ const SyncContext = createContext<SyncState>({
   syncNow: () => {},
 })
 
-const POLL_MS = 20_000
+// Realtime is the primary delivery path; this interval is just a backstop for
+// when a realtime event is missed. Kept short enough that live combat stays
+// responsive even if realtime hiccups.
+const POLL_MS = 8_000
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { user, configured } = useAuth()
@@ -50,7 +54,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         await syncNow(userId)
         setStatus('synced')
         setLastSyncedAt(Date.now())
-      }, 300)
+      }, 120)
     }
   }, [userId])
 
@@ -74,6 +78,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       unsub = subscribeRealtime(userId, () => run.current())
     })()
 
+    const offWrite = onLocalWrite(() => run.current()) // push edits promptly
     const interval = setInterval(() => run.current(), POLL_MS)
     const onFocus = () => run.current()
     const onOnline = () => run.current()
@@ -82,6 +87,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
     return () => {
       unsub()
+      offWrite()
       clearInterval(interval)
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', onOnline)

@@ -9,6 +9,7 @@ import type {
   SyncMeta,
 } from './types'
 import type { CompItem, CompMonster, CompSpell } from '../compendium/types'
+import { emitLocalWrite } from '../sync/bus'
 
 // IndexedDB is the source of truth. The app is fully usable offline;
 // Supabase sync (added later) reconciles these tables across devices.
@@ -49,6 +50,23 @@ export class GrimoireDB extends Dexie {
 }
 
 export const db = new GrimoireDB()
+
+// Ping the sync bus on any write to a synced table, so a DM's change is pushed
+// within a moment instead of waiting for the polling interval. The bus ignores
+// pings raised during the sync engine's own writes. (Compendium tables are not
+// included — they never sync.)
+const SYNCED_TABLES = [
+  db.campaigns, db.sessions, db.entities,
+  db.characters, db.encounters, db.sharedEntities,
+]
+for (const table of SYNCED_TABLES) {
+  const fire = () => {
+    emitLocalWrite()
+  }
+  table.hook('creating', fire)
+  table.hook('updating', fire)
+  table.hook('deleting', fire)
+}
 
 // ── helpers ─────────────────────────────────────────────────────
 

@@ -2,6 +2,7 @@ import type { EntityTable } from 'dexie'
 import { db } from '../db/db'
 import type { SyncMeta } from '../db/types'
 import { supabase } from '../lib/supabase'
+import { emitLocalWrite, suppressWrites } from './bus'
 
 // Maps each local Dexie table to its remote Postgres table. Add new tables
 // here and to supabase/schema.sql to keep them in sync.
@@ -165,20 +166,30 @@ async function backfillCampaign(campaignId: string) {
 
 let running = false
 
-/** Full bidirectional sync: push local changes, then pull remote ones. */
+async function hasDirty(): Promise<boolean> {
+  for (const { local } of TABLES) {
+    if ((await local.where('_dirty').equals(1).count()) > 0) return true
+  }
+  return false
+}
+
+/** Full bidirectional sync. Pushes and pulls run in parallel across tables so
+ *  a change propagates in ~1–2 round-trips instead of ~12 sequential ones. */
 export async function syncNow(userId: string) {
   if (!supabase || running || !navigator.onLine) return
   running = true
+  suppressWrites(true) // the engine's own writes shouldn't re-trigger sync
   try {
-    for (const { remote, local } of TABLES) {
-      await pushTable(userId, remote, local)
-      await pullTable(userId, remote, local)
-    }
+    await Promise.all(TABLES.map((t) => pushTable(userId, t.remote, t.local)))
+    await Promise.all(TABLES.map((t) => pullTable(userId, t.remote, t.local)))
   } catch (err) {
     console.warn('[sync] failed:', err)
   } finally {
     running = false
+    suppressWrites(false)
   }
+  // A change made during the sync window was suppressed — flush it now.
+  if (await hasDirty()) emitLocalWrite()
 }
 
 /** Redeem an invite code via the server-side join function, then pull. */
