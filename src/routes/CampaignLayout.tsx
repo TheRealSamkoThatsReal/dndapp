@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { ensureInviteCode } from '../db/repo'
@@ -38,13 +38,28 @@ export default function CampaignLayout() {
     [campaignId],
   )
 
-  if (campaign === undefined) {
+  // Don't hang on "Loading…" forever if the campaign never arrives.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    setSlow(false)
+    const t = setTimeout(() => setSlow(true), 8000)
+    return () => clearTimeout(t)
+  }, [campaignId])
+
+  if (campaign === undefined && !slow) {
     return <div className="py-20 text-center text-parchment-300/50">Loading…</div>
   }
   if (!campaign || campaign._deleted) {
     return (
-      <div className="py-20 text-center text-parchment-300/50">
-        Campaign not found.
+      <div className="space-y-3 py-20 text-center text-parchment-300/50">
+        <p>Couldn't load this campaign.</p>
+        <p className="text-sm">
+          If you just joined, give it a moment and refresh — or check your
+          connection.
+        </p>
+        <Link to="/" className="inline-block text-ember-400 hover:underline">
+          ← Back to campaigns
+        </Link>
       </div>
     )
   }

@@ -93,25 +93,74 @@ async function pullTable(
   if (!data?.length) return
 
   let maxSeen = since
+  await mergeRows(local, data, (u) => (maxSeen = Math.max(maxSeen, u)))
+  setCursor(userId, remote, maxSeen)
+}
+
+/** Reconstruct a local record from a remote row. */
+function toLocalRecord(row: RemoteRow): SyncMeta {
+  return {
+    ...(row.data as object),
+    id: row.id,
+    ownerId: row.owner_id,
+    updatedAt: row.updated_at,
+    _deleted: row.deleted ? 1 : 0,
+    _dirty: 0,
+  } as SyncMeta
+}
+
+interface RemoteRow {
+  id: string
+  owner_id: string | null
+  updated_at: number
+  deleted: boolean
+  data: unknown
+}
+
+/** Merge remote rows into a table (last-write-wins; never clobbers a
+ *  newer local record). Optionally reports each row's timestamp. */
+async function mergeRows(
+  local: EntityTable<SyncMeta, 'id'>,
+  rows: RemoteRow[],
+  onSeen?: (updatedAt: number) => void,
+) {
   await db.transaction('rw', local, async () => {
-    for (const row of data) {
-      maxSeen = Math.max(maxSeen, row.updated_at)
-      const localRow = await local.get(row.id)
-      // Remote wins only if strictly newer; a dirty-and-newer local record
-      // is preserved and will be pushed on the next cycle.
-      if (!localRow || row.updated_at > localRow.updatedAt) {
-        await local.put({
-          ...(row.data as object),
-          id: row.id,
-          ownerId: row.owner_id,
-          updatedAt: row.updated_at,
-          _deleted: row.deleted ? 1 : 0,
-          _dirty: 0,
-        } as SyncMeta)
+    for (const row of rows) {
+      onSeen?.(row.updated_at)
+      const existing = await local.get(row.id)
+      if (!existing || row.updated_at > existing.updatedAt) {
+        await local.put(toLocalRecord(row))
       }
     }
   })
-  setCursor(userId, remote, maxSeen)
+}
+
+/**
+ * Pull one campaign's shared data directly, bypassing the incremental cursor.
+ * Needed right after joining: the campaign/combat/party rows already exist with
+ * timestamps older than our cursor, so a normal incremental pull would skip them.
+ */
+async function backfillCampaign(campaignId: string) {
+  if (!supabase) return
+  const { data: camp } = await supabase
+    .from('campaigns')
+    .select('*')
+    .eq('id', campaignId)
+    .maybeSingle()
+  if (camp) await mergeRows(db.campaigns as EntityTable<SyncMeta, 'id'>, [camp])
+
+  for (const [remote, local] of [
+    ['encounters', db.encounters],
+    ['shared_entities', db.sharedEntities],
+  ] as const) {
+    const { data } = await supabase
+      .from(remote)
+      .select('*')
+      .eq('data->>campaignId', campaignId)
+    if (data?.length) {
+      await mergeRows(local as EntityTable<SyncMeta, 'id'>, data as RemoteRow[])
+    }
+  }
 }
 
 let running = false
@@ -142,8 +191,14 @@ export async function joinCampaign(
     code: code.trim().toUpperCase(),
   })
   if (error) return { ok: false, error: error.message }
-  await syncNow(userId) // fetch the newly-accessible campaign + combat
-  return { ok: true, campaignId: data as string }
+
+  const campaignId = data as string
+  // Backfill directly (the cursor would skip these older rows), then kick off a
+  // normal sync for anything else. Backfill is what guarantees the campaign
+  // appears immediately instead of hanging on "Loading…".
+  await backfillCampaign(campaignId)
+  void syncNow(userId)
+  return { ok: true, campaignId }
 }
 
 /** Leave a campaign you joined: drop membership server-side, then purge the
