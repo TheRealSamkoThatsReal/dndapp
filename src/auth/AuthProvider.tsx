@@ -56,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       wrap(
         supabase!.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: window.location.origin },
+          // include the app's base path (/dndapp/ on GitHub Pages), not just origin
+          options: {
+            emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
+          },
         }),
       ),
     signOut: async () => {
