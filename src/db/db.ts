@@ -7,6 +7,7 @@ import type {
   Session,
   SyncMeta,
 } from './types'
+import type { CompItem, CompMonster, CompSpell } from '../compendium/types'
 
 // IndexedDB is the source of truth. The app is fully usable offline;
 // Supabase sync (added later) reconciles these tables across devices.
@@ -16,6 +17,11 @@ export class GrimoireDB extends Dexie {
   entities!: EntityTable<Entity, 'id'>
   characters!: EntityTable<Character, 'id'>
   encounters!: EntityTable<Encounter, 'id'>
+  // Compendium tables are device-local reference data — NOT synced (they are
+  // absent from the sync engine's table list). Auto-increment ids.
+  compMonsters!: EntityTable<CompMonster, 'id'>
+  compSpells!: EntityTable<CompSpell, 'id'>
+  compItems!: EntityTable<CompItem, 'id'>
 
   constructor() {
     super('grimoire')
@@ -26,6 +32,12 @@ export class GrimoireDB extends Dexie {
       entities: 'id, campaignId, kind, name, _dirty, _deleted',
       characters: 'id, campaignId, _dirty, _deleted',
       encounters: 'id, campaignId, _dirty, _deleted',
+    })
+    // v2 adds the imported compendium (unmentioned v1 tables carry over).
+    this.version(2).stores({
+      compMonsters: '++id, search, cr',
+      compSpells: '++id, search, level',
+      compItems: '++id, search',
     })
   }
 }

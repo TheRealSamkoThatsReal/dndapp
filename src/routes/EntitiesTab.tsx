@@ -8,6 +8,7 @@ import { Button, EmptyState, KIND_META } from '../ui/kit'
 import type { CampaignContext } from './CampaignLayout'
 import { NotesEditor } from '../components/NotesEditor'
 import { StatblockEditor } from '../components/StatblockEditor'
+import { CompendiumModal } from '../compendium/CompendiumModal'
 
 const KINDS: EntityKind[] = ['npc', 'location', 'quest', 'item', 'monster']
 
@@ -15,6 +16,7 @@ export default function EntitiesTab() {
   const { campaign } = useOutletContext<CampaignContext>()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filter, setFilter] = useState<EntityKind | 'all'>('all')
+  const [compendium, setCompendium] = useState(false)
 
   const entities = useLiveQuery(
     () =>
@@ -62,6 +64,14 @@ export default function EntitiesTab() {
             </Button>
           ))}
         </div>
+
+        <Button
+          variant="primary"
+          onClick={() => setCompendium(true)}
+          className="w-full justify-center text-xs"
+        >
+          📖 Add from Compendium
+        </Button>
 
         <div className="space-y-1">
           {shown?.map((e) => (
@@ -128,6 +138,13 @@ export default function EntitiesTab() {
           />
         )}
       </div>
+
+      {compendium && (
+        <CompendiumModal
+          campaignId={campaign.id}
+          onClose={() => setCompendium(false)}
+        />
+      )}
     </div>
   )
 }

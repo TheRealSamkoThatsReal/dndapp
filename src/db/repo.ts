@@ -7,6 +7,8 @@ import type {
   EntityKind,
   Session,
 } from './types'
+import type { CompMonster } from '../compendium/types'
+import { monsterToEntityFields } from '../compendium/import'
 
 // ── Campaigns ───────────────────────────────────────────────────
 export async function createCampaign(name: string, accent = '#d6872b') {
@@ -60,6 +62,22 @@ export async function updateEntity(id: string, patch: Partial<Entity>) {
 }
 
 export const deleteEntity = (id: string) => softDelete(db.entities, id)
+
+// Add a compendium monster into a campaign as a real (synced) entity.
+export async function addMonsterEntity(campaignId: string, m: CompMonster) {
+  const f = monsterToEntityFields(m)
+  const entity: Entity = {
+    ...newMeta(),
+    campaignId,
+    kind: f.kind,
+    name: f.name,
+    notes: f.notes,
+    meta: { cr: m.cr, source: 'compendium' },
+    statblock: f.statblock,
+  }
+  await db.entities.add(entity)
+  return entity
+}
 
 // ── Sessions ────────────────────────────────────────────────────
 export async function createSession(campaignId: string) {

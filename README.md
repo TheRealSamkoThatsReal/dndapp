@@ -44,6 +44,15 @@ IndexedDB and shows a "Local only" badge.
 > **Tip for quick testing:** in Supabase **Authentication → Providers → Email**,
 > turn off "Confirm email" so password sign-up works without an inbox round-trip.
 
+## Compendium import (Fight Club 5e XML)
+
+The Wiki tab's **📖 Add from Compendium** button imports a Fight Club / Game
+Master 5e XML compendium (monsters, spells, items). It's parsed in-browser in
+chunks and stored in **device-local Dexie tables that are not synced** — a
+50MB+ reference library has no business in your account. Search it, then add
+the monsters you actually need to a campaign; those become real synced entities
+with full statblocks ready to drop into combat.
+
 ## Deployment
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds with
