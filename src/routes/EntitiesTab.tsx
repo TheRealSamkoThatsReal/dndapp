@@ -7,6 +7,7 @@ import type { EntityKind } from '../db/types'
 import { Button, EmptyState, KIND_META } from '../ui/kit'
 import type { CampaignContext } from './CampaignLayout'
 import { NotesEditor } from '../components/NotesEditor'
+import { StatblockEditor } from '../components/StatblockEditor'
 
 const KINDS: EntityKind[] = ['npc', 'location', 'quest', 'item', 'monster']
 
@@ -108,6 +109,10 @@ export default function EntitiesTab() {
                 Delete
               </Button>
             </div>
+
+            {(selected.kind === 'monster' || selected.kind === 'npc') && (
+              <StatblockEditor entity={selected} />
+            )}
 
             <NotesEditor
               value={selected.notes}

@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import { AuthProvider } from './auth/AuthProvider.tsx'
 import { SyncProvider } from './sync/SyncProvider.tsx'
+import { DiceProvider } from './dice/DiceContext.tsx'
 import RootLayout from './App.tsx'
 import Campaigns from './routes/Campaigns.tsx'
 import CampaignLayout from './routes/CampaignLayout.tsx'
@@ -43,7 +44,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <SyncProvider>
-        <RouterProvider router={router} />
+        <DiceProvider>
+          <RouterProvider router={router} />
+        </DiceProvider>
       </SyncProvider>
     </AuthProvider>
   </StrictMode>,

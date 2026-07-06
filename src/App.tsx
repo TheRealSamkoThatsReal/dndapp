@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SyncBadge } from './sync/SyncBadge'
+import { DiceRoller } from './dice/DiceRoller'
 
 export default function RootLayout() {
   const { pathname } = useLocation()
@@ -27,6 +28,8 @@ export default function RootLayout() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Outlet />
       </main>
+
+      <DiceRoller />
     </div>
   )
 }
