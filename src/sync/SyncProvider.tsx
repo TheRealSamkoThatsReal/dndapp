@@ -50,8 +50,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
       if (timer.current) clearTimeout(timer.current)
       timer.current = setTimeout(async () => {
-        setStatus('syncing')
+        // Only surface "Syncing…" if it's actually slow — otherwise the badge
+        // would flicker on every fast sync during live play.
+        const slow = setTimeout(() => setStatus('syncing'), 600)
         await syncNow(userId)
+        clearTimeout(slow)
         setStatus('synced')
         setLastSyncedAt(Date.now())
       }, 120)

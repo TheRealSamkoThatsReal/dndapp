@@ -154,10 +154,9 @@ export async function moveCombatantPos(
   await updateEncounter(enc.id, { active: { ...enc.active, combatants } })
 }
 
-const tokenId = (encounterId: string, key: string) => `token:${encounterId}:${key}`
-
 /** Player: move their own PC token. Stored as a shared-party row (which they
- *  can write and everyone can read), keyed deterministically per PC+encounter. */
+ *  can write and everyone can read). One row per PC+encounter — found by its
+ *  token fields (the row id must stay a real uuid for the Postgres pk). */
 export async function moveToken(
   campaignId: string,
   encounterId: string,
@@ -167,15 +166,23 @@ export async function moveToken(
   authorName: string,
 ) {
   const key = combatant.sourceId ?? combatant.id
-  const id = tokenId(encounterId, key)
   const token = { encounterId, combatantId: combatant.id, sourceId: combatant.sourceId, x, y }
-  const existing = await db.sharedEntities.get(id)
+  const existing = await db.sharedEntities
+    .filter((e) => {
+      if (e._deleted !== 0 || !e.token) return false
+      if (e.token.encounterId !== encounterId) return false
+      return (e.token.sourceId ?? e.token.combatantId) === key
+    })
+    .first()
   if (existing) {
-    await db.sharedEntities.update(id, { token, _dirty: 1, updatedAt: Date.now() })
+    await db.sharedEntities.update(existing.id, {
+      token,
+      _dirty: 1,
+      updatedAt: Date.now(),
+    })
   } else {
     await db.sharedEntities.add({
       ...newMeta(),
-      id,
       campaignId,
       kind: 'npc',
       name: `${combatant.name} (token)`,

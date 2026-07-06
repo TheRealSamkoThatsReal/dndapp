@@ -46,6 +46,19 @@ export class GrimoireDB extends Dexie {
     this.version(3).stores({
       sharedEntities: 'id, campaignId, _dirty, _deleted',
     })
+    // v4: purge early battlemap token rows that used a non-uuid id — Postgres
+    // rejected them on every push, wedging the sync loop. New ones use a uuid.
+    this.version(4)
+      .stores({ sharedEntities: 'id, campaignId, _dirty, _deleted' })
+      .upgrade((tx) =>
+        tx
+          .table('sharedEntities')
+          .filter(
+            (e: { id: unknown }) =>
+              typeof e.id === 'string' && e.id.startsWith('token:'),
+          )
+          .delete(),
+      )
   }
 }
 
